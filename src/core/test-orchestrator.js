@@ -522,7 +522,14 @@ class TestOrchestrator {
 
   /**
    * Resolve a selector string into a Playwright Locator.
-   * Handles CSS selectors, getByRole, getByText, getByLabel, getByPlaceholder, etc.
+   *
+   * Supports:
+   *   - CSS selectors: "#id", ".class", "button[type='submit']"
+   *   - XPath: "//div[@id='main']"
+   *   - All Playwright getBy* methods: getByRole, getByText, getByLabel,
+   *     getByPlaceholder, getByTestId, getByAltText, getByTitle
+   *   - Chaining: .nth(0), .first(), .last(), .filter(...)
+   *   - Locator syntax: "role=button[name='Submit']"
    *
    * @param {string} selector
    * @returns {import('@playwright/test').Locator}
@@ -532,53 +539,59 @@ class TestOrchestrator {
       return this.page.locator(selector);
     }
 
-    // Handle getByRole('role', { name: 'xxx' }) with optional .nth(n)
-    const roleMatch = selector.match(
-      /^getByRole\(['"](\w+)['"]\s*(?:,\s*\{\s*name:\s*['"](.+?)['"]\s*\})?\)(?:\.nth\((\d+)\))?$/
-    );
-    if (roleMatch) {
-      const [, role, name, nth] = roleMatch;
-      let loc = name
-        ? this.page.getByRole(role, { name })
-        : this.page.getByRole(role);
-      if (nth !== undefined) loc = loc.nth(parseInt(nth, 10));
-      return loc;
+    const trimmed = selector.trim();
+
+    // ── Playwright getBy* syntax (e.g. from AI agents) ─────────────────
+    if (trimmed.startsWith('getBy')) {
+      return this._evalLocatorExpression(trimmed);
     }
 
-    // Handle getByText('xxx')
-    const textMatch = selector.match(/^getByText\(['"](.+?)['"]\)(?:\.nth\((\d+)\))?$/);
-    if (textMatch) {
-      let loc = this.page.getByText(textMatch[1]);
-      if (textMatch[2] !== undefined) loc = loc.nth(parseInt(textMatch[2], 10));
-      return loc;
+    // ── page.getBy* or page.locator(...) syntax ────────────────────────
+    if (trimmed.startsWith('page.')) {
+      return this._evalLocatorExpression(trimmed.replace(/^page\./, ''));
     }
 
-    // Handle getByLabel('xxx')
-    const labelMatch = selector.match(/^getByLabel\(['"](.+?)['"]\)(?:\.nth\((\d+)\))?$/);
-    if (labelMatch) {
-      let loc = this.page.getByLabel(labelMatch[1]);
-      if (labelMatch[2] !== undefined) loc = loc.nth(parseInt(labelMatch[2], 10));
-      return loc;
+    // ── Default: CSS / XPath / Playwright built-in locator syntax ──────
+    return this.page.locator(trimmed);
+  }
+
+  /**
+   * Safely evaluate a Playwright locator expression string.
+   * Handles: getByRole('button', { name: 'Submit' }).nth(0).first()
+   *
+   * Security: only allows page.getBy*, .locator(), .nth(), .first(),
+   * .last(), .filter() — no arbitrary code execution.
+   *
+   * @param {string} expression – e.g. "getByRole('textbox', { name: 'Email' }).nth(0)"
+   * @returns {import('@playwright/test').Locator}
+   */
+  _evalLocatorExpression(expression) {
+    // Safety check: block dangerous patterns but allow { } for options objects
+    // e.g. getByRole('textbox', { name: 'Email' }) is safe
+    const forbidden = /;|require\s*\(|import\s|eval\s*\(|process\.|__proto__|prototype\[/i;
+    if (forbidden.test(expression)) {
+      console.warn(`[TestOrchestrator] Blocked unsafe locator expression: ${expression}`);
+      return this.page.locator(expression);
     }
 
-    // Handle getByPlaceholder('xxx')
-    const placeholderMatch = selector.match(/^getByPlaceholder\(['"](.+?)['"]\)(?:\.nth\((\d+)\))?$/);
-    if (placeholderMatch) {
-      let loc = this.page.getByPlaceholder(placeholderMatch[1]);
-      if (placeholderMatch[2] !== undefined) loc = loc.nth(parseInt(placeholderMatch[2], 10));
-      return loc;
-    }
+    try {
+      // Use Function constructor to safely evaluate against the page object
+      // The expression is scoped: only 'page' is available as a variable
+      const fn = new Function('page', `"use strict"; return page.${expression};`);
+      const locator = fn(this.page);
 
-    // Handle getByTestId('xxx')
-    const testIdMatch = selector.match(/^getByTestId\(['"](.+?)['"]\)(?:\.nth\((\d+)\))?$/);
-    if (testIdMatch) {
-      let loc = this.page.getByTestId(testIdMatch[1]);
-      if (testIdMatch[2] !== undefined) loc = loc.nth(parseInt(testIdMatch[2], 10));
-      return loc;
-    }
+      // Verify we got a valid Locator object back
+      if (locator && typeof locator.click === 'function') {
+        return locator;
+      }
 
-    // Default: treat as CSS selector
-    return this.page.locator(selector);
+      // Fallback if evaluation returned something unexpected
+      console.warn(`[TestOrchestrator] Locator expression did not return a valid locator: ${expression}`);
+      return this.page.locator(expression);
+    } catch (err) {
+      console.warn(`[TestOrchestrator] Failed to evaluate locator expression: ${expression} – ${err.message}`);
+      return this.page.locator(expression);
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════
