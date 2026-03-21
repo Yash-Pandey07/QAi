@@ -9,6 +9,7 @@
     "test:adaptive": "cross-env HEAL_MODE=adaptive npx playwright test",
     "test:login": "npx playwright test tests/e2e/login.spec.js --headed",
     "test:checkout": "npx playwright test tests/e2e/checkout.spec.js --headed",
+    "test:login-form": "npx playwright test tests/e2e/login-form.spec.js --headed",
     "report": "npx playwright show-report"
   },
   "keywords": [
