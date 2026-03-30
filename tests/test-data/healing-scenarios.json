@@ -1,0 +1,142 @@
+[
+  {
+    "name": "Broken email input selector",
+    "testId": "login-form-data-001-heal",
+    "timeoutMs": 300000,
+    "steps": [
+      {
+        "action": "goto",
+        "target": "https://swag-testing.vercel.app/"
+      },
+      {
+        "action": "fill",
+        "target": "[data-testid=\"email-input-v3\"]",
+        "value": "john@mail.com",
+        "description": "Email address input field on login form"
+      },
+      {
+        "action": "fill",
+        "target": "input[type=\"password\"]",
+        "value": "changeme",
+        "description": "Password input field"
+      },
+      {
+        "action": "click",
+        "target": "button:has-text(\"Login\")",
+        "description": "Login button"
+      }
+    ],
+    "expectations": {
+      "urlPattern": "/\\/inventory/",
+      "selectorVisible": "a.font-bold",
+      "expectedHeal": true
+    }
+  },
+  {
+    "name": "Broken login button selector",
+    "testId": "login-form-data-002-heal",
+    "timeoutMs": 300000,
+    "steps": [
+      {
+        "action": "goto",
+        "target": "https://swag-testing.vercel.app/"
+      },
+      {
+        "action": "fill",
+        "target": "input[type=\"email\"]",
+        "value": "john@mail.com",
+        "description": "Email address input field"
+      },
+      {
+        "action": "fill",
+        "target": "input[type=\"password\"]",
+        "value": "changeme",
+        "description": "Password input field"
+      },
+      {
+        "action": "click",
+        "target": "[data-testid=\"submit-login-btn\"]",
+        "description": "Sign in submit button on login form"
+      }
+    ],
+    "expectations": {
+      "urlPattern": "/\\/inventory/",
+      "selectorVisible": "a.font-bold",
+      "expectedHeal": true
+    }
+  },
+  {
+    "name": "Broken password and login button selectors",
+    "testId": "login-form-data-003-heal",
+    "timeoutMs": 300000,
+    "steps": [
+      {
+        "action": "goto",
+        "target": "https://swag-testing.vercel.app/"
+      },
+      {
+        "action": "fill",
+        "target": "input[type=\"email\"]",
+        "value": "john@mail.com",
+        "description": "Email address input field"
+      },
+      {
+        "action": "fill",
+        "target": "[name=\"user-password-field\"]",
+        "value": "changeme",
+        "description": "Password input field on login form"
+      },
+      {
+        "action": "click",
+        "target": "button.submit-login",
+        "description": "Sign in submit button on login form"
+      }
+    ],
+    "expectations": {
+      "urlPattern": "/\\/inventory/",
+      "selectorVisible": "a.font-bold",
+      "expectedHeal": true
+    }
+  },
+  {
+    "name": "Broken email and add to cart selectors",
+    "testId": "e2e-add-to-cart-data-001-heal",
+    "timeoutMs": 300000,
+    "steps": [
+      {
+        "action": "goto",
+        "target": "https://swag-testing.vercel.app/"
+      },
+      {
+        "action": "fill",
+        "target": "#user-login-email-field-v2",
+        "value": "john@mail.com",
+        "description": "Email address input field"
+      },
+      {
+        "action": "fill",
+        "target": "input[type=\"password\"]",
+        "value": "changeme",
+        "description": "Password input field"
+      },
+      {
+        "action": "click",
+        "target": "button:has-text(\"Login\")",
+        "description": "Login submit button"
+      },
+      {
+        "action": "waitForURL",
+        "target": "/\\/inventory/"
+      },
+      {
+        "action": "click",
+        "target": "button.custom-add-to-cart-action",
+        "description": "The Add to cart button for a product in the catalog"
+      }
+    ],
+    "expectations": {
+      "selectorVisible": "button:has-text(\"Remove\")",
+      "expectedHeal": true
+    }
+  }
+]
