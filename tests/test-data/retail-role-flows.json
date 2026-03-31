@@ -64,7 +64,7 @@
       },
       {
         "action": "click",
-        "target": "locator('button:enabled').filter({ hasText: /^Add to cart$/ }).first()",
+        "target": "page.locator('button:enabled').filter({ hasText: /^Add to cart$/ }).first()",
         "description": "First enabled Add to cart button in the products grid"
       },
       {
@@ -124,11 +124,11 @@
       },
       {
         "action": "assertVisible",
-        "target": "locator('button').filter({ hasText: /^Pay (US)?\\$/ }).first()"
+        "target": "page.locator('button').filter({ hasText: /^Pay (US)?\\$/ }).first()"
       },
       {
         "action": "click",
-        "target": "locator('button').filter({ hasText: /^Pay (US)?\\$/ }).first()",
+        "target": "page.locator('button').filter({ hasText: /^Pay (US)?\\$/ }).first()",
         "description": "Pay button on the checkout page"
       },
       {
@@ -236,7 +236,7 @@
       },
       {
         "action": "click",
-        "target": "locator('button:enabled').filter({ hasText: /^Add to cart$/ }).first()",
+        "target": "page.locator('button:enabled').filter({ hasText: /^Add to cart$/ }).first()",
         "description": "First enabled Add to cart button in the products grid"
       },
       {
@@ -363,16 +363,16 @@
       },
       {
         "action": "assertCountAtLeast",
-        "target": "locator('[id^=\"p_\"]')",
+        "target": "page.locator('[id^=\"p_\"]')",
         "value": 1
       },
       {
         "action": "assertVisible",
-        "target": "locator('input.rw-input[class*=\"q-\"]')"
+        "target": "page.locator('input.rw-input[class*=\"q-\"]')"
       },
       {
         "action": "click",
-        "target": "locator('button:enabled').filter({ hasText: /^Add to cart$/ }).first()",
+        "target": "page.locator('button:enabled').filter({ hasText: /^Add to cart$/ }).first()",
         "description": "First enabled Add to cart button in the products grid while testing mode is enabled"
       },
       {
@@ -428,7 +428,7 @@
       },
       {
         "action": "click",
-        "target": "locator('button').filter({ hasText: /^Pay (US)?\\$/ }).first()",
+        "target": "page.locator('button').filter({ hasText: /^Pay (US)?\\$/ }).first()",
         "description": "Pay button on the checkout page while testing mode is enabled"
       },
       {

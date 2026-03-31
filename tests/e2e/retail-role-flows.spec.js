@@ -8,9 +8,11 @@ test.describe('Retail website role flows', () => {
     test(scenario.name, async ({ page }) => {
       test.setTimeout(scenario.timeoutMs || 120000);
       const orchestrator = new TestOrchestrator(page, scenario.testId || slugify(scenario.name));
+      const scenarioName = scenario.name;
 
       try {
-        for (const step of scenario.steps) {
+        for (let index = 0; index < scenario.steps.length; index++) {
+          const step = scenario.steps[index];
           await runStep(page, orchestrator, step);
 
           if (STEP_DELAY_MS > 0) {
