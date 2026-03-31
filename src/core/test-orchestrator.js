@@ -27,6 +27,7 @@ const NetworkLogTool = require('../tools/network-log-tool');
 const HealingReportWriter = require('../telemetry/healing-report-writer');
 const eventBus = require('../telemetry/event-bus');
 const { createFailedStepContext, createHealingEvent } = require('../types/contracts');
+const policyConfig = require('../../config/policy.config');
 
 class TestOrchestrator {
   /**
@@ -254,6 +255,32 @@ class TestOrchestrator {
       this.runContext.recordUrl(this.page.url());
       return;
     } catch (originalError) {
+      const deterministicRetryCount = Math.max(
+        0,
+        frameworkConfig.execution.maxDeterministicRetries || 0
+      );
+
+      for (let attempt = 0; attempt < deterministicRetryCount; attempt++) {
+        const backoffMs = 500 * Math.pow(2, attempt);
+        console.log(
+          `[TestOrchestrator] Deterministic retry ${attempt + 1}/${deterministicRetryCount} for ${action} "${selector}" after ${backoffMs}ms`
+        );
+
+        await this.page.waitForTimeout(backoffMs);
+
+        try {
+          await this._performAction(action, selector, value, timeout);
+          this.runContext.recordStep({ stepId, action, selector, result: 'pass' });
+          this.runContext.recordUrl(this.page.url());
+          return;
+        } catch (retryError) {
+          if (attempt === deterministicRetryCount - 1) {
+            console.warn(
+              `[TestOrchestrator] Deterministic retries exhausted: ${retryError.message}`
+            );
+          }
+        }
+      }
       console.warn(
         `[TestOrchestrator] Step failed: ${action} "${selector}" – ${originalError.message}`
       );
@@ -332,7 +359,7 @@ class TestOrchestrator {
 
         if (retryDecision.decision === 'apply' && retryResult.recommendedSelector) {
           return await this._applyHealedSelector(
-            action, retryResult.recommendedSelector, value, timeout,
+            action, value, timeout,
             stepId, failedCtx, retryResult
           );
         }
@@ -344,7 +371,7 @@ class TestOrchestrator {
 
       if (decision.decision === 'apply' && recoveryResult.recommendedSelector) {
         return await this._applyHealedSelector(
-          action, recoveryResult.recommendedSelector, value, timeout,
+          action, value, timeout,
           stepId, failedCtx, recoveryResult
         );
       }
@@ -358,13 +385,31 @@ class TestOrchestrator {
   /**
    * Apply a healed selector and validate.
    */
-  async _applyHealedSelector(action, healedSelector, value, timeout, stepId, failedCtx, recoveryResult) {
-    console.log(`[TestOrchestrator] Applying healed selector: ${healedSelector}`);
+  async _applyHealedSelector(action, value, timeout, stepId, failedCtx, recoveryResult) {
+    const candidates = this._getOrderedCandidates(recoveryResult);
+    let lastHealError = null;
 
-    try {
-      await this._performAction(action, healedSelector, value, timeout);
+    for (const candidate of candidates) {
+      const candidateConfidence =
+        typeof candidate.confidence === 'number'
+          ? candidate.confidence
+          : recoveryResult.recommendedSelector === candidate.selector
+            ? recoveryResult.recommendedConfidence
+            : 0;
 
-      // ── Success! ────────────────────────────────────────────────
+      if (candidateConfidence < policyConfig.confidence.mediumThreshold) {
+        console.log(
+          `[TestOrchestrator] Stopping candidate cascade at ${candidate.selector} due to confidence ${candidateConfidence.toFixed(2)}`
+        );
+        break;
+      }
+
+      console.log(
+        `[TestOrchestrator] Applying healed selector candidate: ${candidate.selector}`
+      );
+
+      try {
+        await this._performAction(action, candidate.selector, value, timeout);
       eventBus.publish(
         createHealingEvent({
           type: 'selector_recovery_applied',
@@ -372,34 +417,43 @@ class TestOrchestrator {
           stepId,
           payload: {
             originalSelector: failedCtx.originalSelector,
-            healedSelector,
-            confidence: recoveryResult.recommendedConfidence,
+            healedSelector: candidate.selector,
+            confidence: candidateConfidence,
             source: recoveryResult.source,
           },
         })
       );
 
-      // Persist to memory
-      if (recoveryResult.candidates?.[0]) {
-        this.selectorMemory.record(failedCtx, recoveryResult.candidates[0]);
-      }
-
-      // Screenshot after healing
-      try {
-        await this.screenshotTool.capture({
-          testId: this.testId,
-          stepId,
-          phase: 'after_heal',
+        this.selectorMemory.record(failedCtx, {
+          selector: candidate.selector,
+          strategy: candidate.strategy || 'css',
+          confidence: candidateConfidence,
         });
-      } catch { /* ignore */ }
+        try {
+          await this.screenshotTool.capture({
+            testId: this.testId,
+            stepId,
+            phase: 'after_heal',
+          });
+        } catch { /* ignore */ }
 
-      this.runContext.recordStep({ stepId, action, selector: healedSelector, result: 'healed' });
-      this.runContext.recordUrl(this.page.url());
-    } catch (healError) {
-      console.error(`[TestOrchestrator] Healed selector also failed: ${healError.message}`);
-      this.runContext.recordStep({ stepId, action, selector: healedSelector, result: 'fail' });
-      throw healError;
+        this.runContext.recordStep({ stepId, action, selector: candidate.selector, result: 'healed' });
+        this.runContext.recordUrl(this.page.url());
+        return;
+      } catch (healError) {
+        lastHealError = healError;
+        console.error(
+          `[TestOrchestrator] Healed selector candidate failed: ${candidate.selector} - ${healError.message}`
+        );
+      }
     }
+
+    if (lastHealError) {
+      this.runContext.recordStep({ stepId, action, selector: failedCtx.originalSelector, result: 'fail' });
+      throw lastHealError;
+    }
+
+    throw new Error('No healed selector candidate met the confidence threshold');
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -601,6 +655,40 @@ class TestOrchestrator {
   _nextStepId(action) {
     this._stepCounter++;
     return `${this.testId}-step-${this._stepCounter}-${action}`;
+  }
+
+  _getOrderedCandidates(recoveryResult) {
+    const ordered = [];
+    const seen = new Set();
+
+    const pushCandidate = (candidate) => {
+      if (!candidate?.selector || seen.has(candidate.selector)) {
+        return;
+      }
+
+      seen.add(candidate.selector);
+      ordered.push(candidate);
+    };
+
+    if (recoveryResult.recommendedSelector) {
+      const matchingCandidate = (recoveryResult.candidates || []).find(
+        (candidate) => candidate.selector === recoveryResult.recommendedSelector
+      );
+
+      pushCandidate(
+        matchingCandidate || {
+          selector: recoveryResult.recommendedSelector,
+          strategy: 'css',
+          confidence: recoveryResult.recommendedConfidence || 0,
+        }
+      );
+    }
+
+    for (const candidate of recoveryResult.candidates || []) {
+      pushCandidate(candidate);
+    }
+
+    return ordered;
   }
 
   _failStep(stepId, error, decision) {

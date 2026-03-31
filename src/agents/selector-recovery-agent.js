@@ -73,7 +73,7 @@ class SelectorRecoveryAgent {
         return {
           candidates: memoryCandidates,
           recommendedSelector: topMemory.selector,
-          recommendedConfidence: topMemory.score,
+          recommendedConfidence: topMemory.confidence, // Use original confidence for policy, not decayed score
           shouldRetryWithMoreContext: false,
           source: 'memory',
         };
@@ -91,6 +91,7 @@ class SelectorRecoveryAgent {
 
     try {
       const response = await this.aiClient.chat(SYSTEM_PROMPT, userPrompt);
+      console.log(`[SelectorRecoveryAgent] raw AI response:`, response.content);
       const result = JSON.parse(response.content);
 
       // Normalize result
@@ -160,15 +161,21 @@ class SelectorRecoveryAgent {
    */
   async _selectorExists(selector) {
     try {
-      // Handle getByRole/getByText style selectors vs CSS selectors
-      if (selector.startsWith('getBy') || selector.startsWith('page.')) {
-        // For Playwright locator syntax, we can't easily eval here
-        // Fall through to let the orchestrator validate
+      const trimmed = selector.trim();
+      if (trimmed.startsWith('getBy') || trimmed.startsWith('page.')) {
+        const expr = trimmed.startsWith('page.') ? trimmed.replace(/^page\./, '') : trimmed;
+        const fn = new Function('page', `"use strict"; return page.${expr};`);
+        const locator = fn(this.page);
+        if (locator && typeof locator.count === 'function') {
+           const count = await locator.count();
+           return count > 0;
+        }
         return false;
       }
-      const count = await this.page.locator(selector).count();
+      const count = await this.page.locator(trimmed).count();
       return count > 0;
     } catch {
+      // Return false if locator evaluation fails or element not found
       return false;
     }
   }

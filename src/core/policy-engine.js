@@ -33,7 +33,7 @@ class PolicyEngine {
     const confidence = evaluateSelectorConfidence(result);
 
     // ── Check retry budget ─────────────────────────────────────────
-    if (runCtx.selectorRecoveryAttempts >= policyConfig.retries.maxSelectorRetries) {
+    if (runCtx.selectorRecoveryAttempts > policyConfig.retries.maxSelectorRetries) {
       const decision = {
         decision: 'fail',
         reason: `Max selector retries (${policyConfig.retries.maxSelectorRetries}) exhausted`,

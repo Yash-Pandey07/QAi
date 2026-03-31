@@ -10,7 +10,12 @@
     "test:login": "npx playwright test tests/e2e/login.spec.js --headed",
     "test:checkout": "npx playwright test tests/e2e/checkout.spec.js --headed",
     "test:login-form": "npx playwright test tests/e2e/login-form.spec.js --headed",
-    "report": "npx playwright show-report"
+    "test:data-healing": "npx playwright test tests/e2e/data-driven-healing.spec.js",
+    "test:showcase": "npx playwright test tests/e2e/showcase-scenarios.spec.js --headed",
+    "test:retail": "npx playwright test tests/e2e/retail-role-flows.spec.js",
+    "test:retail:record": "cross-env RETAIL_STEP_DELAY_MS=1500 npx playwright test tests/e2e/retail-role-flows.spec.js --headed",
+    "report": "npx playwright show-report",
+    "sync-heals": "node src/tools/sync-to-source.js"
   },
   "keywords": [
     "playwright",
