@@ -250,6 +250,7 @@ class TestOrchestrator {
     const stepId = this._nextStepId(action);
     const timeout = opts.timeout || frameworkConfig.execution.actionTimeoutMs;
     const description = opts.description || `${action} on ${selector}`;
+    let selectorRecoveryAttemptsForStep = 0;
 
     // ── Step 1: Try the original selector ───────────────────────────
     try {
@@ -334,13 +335,17 @@ class TestOrchestrator {
       });
 
       // ── Step 4: Invoke Selector Recovery Agent ────────────────────
+      selectorRecoveryAttemptsForStep++;
       this.runContext.selectorRecoveryAttempts++;
       const recoveryResult = await this._getSelectorAgent().recover(failedCtx);
 
       // ── Step 5: Policy decision ───────────────────────────────────
       const decision = this.policyEngine.evaluateSelectorRecovery(
         recoveryResult,
-        this.runContext
+        {
+          ...this.runContext,
+          selectorRecoveryAttempts: selectorRecoveryAttemptsForStep,
+        }
       );
 
       this.runContext.recordHealingDecision({
@@ -353,16 +358,23 @@ class TestOrchestrator {
         source: recoveryResult.source,
       });
 
-      if (decision.decision === 'retry' && this.runContext.selectorRecoveryAttempts < 2) {
+      if (
+        decision.decision === 'retry'
+        && selectorRecoveryAttemptsForStep < policyConfig.retries.maxSelectorRetries
+      ) {
         // Retry with expanded DOM context
         console.log('[TestOrchestrator] Retrying with more context...');
         const bigDom = await this.domTool.capture({ maxLength: 8000 });
         failedCtx.domExcerpt = bigDom;
+        selectorRecoveryAttemptsForStep++;
         this.runContext.selectorRecoveryAttempts++;
         const retryResult = await this._getSelectorAgent().recover(failedCtx);
         const retryDecision = this.policyEngine.evaluateSelectorRecovery(
           retryResult,
-          this.runContext
+          {
+            ...this.runContext,
+            selectorRecoveryAttempts: selectorRecoveryAttemptsForStep,
+          }
         );
 
         if (retryDecision.decision === 'apply' && retryResult.recommendedSelector) {

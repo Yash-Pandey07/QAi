@@ -142,12 +142,44 @@ class MockProvider {
         recommendedSelector: 'input[type="email"]',
         recommendedConfidence: 0.98
       },
+      '#user-login-email-v2-broken': {
+        candidates: [
+          { selector: 'input[type="email"]', confidence: 0.99, strategy: 'attribute_match', rationale: 'Matched email input by type attribute' },
+          { selector: 'page.getByLabel("Email")', confidence: 0.94, strategy: 'accessibility', rationale: 'Matched email field using label semantics' }
+        ],
+        recommendedSelector: 'input[type="email"]',
+        recommendedConfidence: 0.99
+      },
+      'a.nav-link-products-v2': {
+        candidates: [
+          { selector: 'a[href="/app/products"]', confidence: 0.99, strategy: 'attribute_match', rationale: 'Matched products route link by href' },
+          { selector: 'page.getByRole("link", { name: "Products" })', confidence: 0.93, strategy: 'accessibility', rationale: 'Matched Products navigation link by role and name' }
+        ],
+        recommendedSelector: 'a[href="/app/products"]',
+        recommendedConfidence: 0.99
+      },
       'button.custom-add-to-cart-action': {
         candidates: [
           { selector: 'button:has-text("Add to cart") >> nth=0', confidence: 0.99, strategy: 'text_match', rationale: 'Matched first "Add to cart" precisely' },
           { selector: 'page.getByRole("button", { name: "Add to cart" }).first()', confidence: 0.97, strategy: 'accessibility', rationale: 'Semantic button match' }
         ],
         recommendedSelector: 'button:has-text("Add to cart") >> nth=0',
+        recommendedConfidence: 0.99
+      },
+      'button.add-to-cart-action-btn-broken': {
+        candidates: [
+          { selector: 'button.rw-btn-primary:has-text("Add to cart"):not([disabled]) >> nth=0', confidence: 0.99, strategy: 'attribute_match', rationale: 'Matched first enabled Add to cart button' },
+          { selector: 'page.getByRole("button", { name: "Add to cart" }).locator(":not([disabled])").first()', confidence: 0.90, strategy: 'accessibility', rationale: 'Matched enabled Add to cart button by role and name' }
+        ],
+        recommendedSelector: 'button.rw-btn-primary:has-text("Add to cart"):not([disabled]) >> nth=0',
+        recommendedConfidence: 0.99
+      },
+      'button.proceed-to-checkout-v3': {
+        candidates: [
+          { selector: 'button.rw-btn-primary:has-text("Checkout")', confidence: 0.99, strategy: 'text_match', rationale: 'Matched checkout action button by visible text' },
+          { selector: 'page.getByRole("button", { name: "Checkout" })', confidence: 0.95, strategy: 'accessibility', rationale: 'Matched checkout button by role and accessible name' }
+        ],
+        recommendedSelector: 'button.rw-btn-primary:has-text("Checkout")',
         recommendedConfidence: 0.99
       },
       '[data-testid="email-input-v3"]': {
