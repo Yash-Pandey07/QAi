@@ -1,0 +1,286 @@
+name: 🧪 CI — Self-Healing Test Suite
+
+on:
+  push:
+    branches: [main, dev, "feature/**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      heal_mode:
+        description: 'Healing mode (strict | adaptive)'
+        required: false
+        default: 'adaptive'
+        type: choice
+        options: [strict, adaptive]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  HEAL_MODE: ${{ github.event.inputs.heal_mode || 'adaptive' }}
+  NODE_VERSION: '20'
+
+jobs:
+  # ─────────────────────────────────────────────────────────
+  # JOB 1: Install & Cache Dependencies
+  # ─────────────────────────────────────────────────────────
+  setup:
+    name: 📦 Install Dependencies
+    runs-on: ubuntu-latest
+    outputs:
+      cache-hit: ${{ steps.cache.outputs.cache-hit }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Cache node_modules
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: node-${{ runner.os }}-
+
+      - name: Install npm dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: npm ci --prefer-offline
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+  # ─────────────────────────────────────────────────────────
+  # JOB 2: Lint & Static Checks
+  # ─────────────────────────────────────────────────────────
+  lint:
+    name: 🔍 Lint & Validate
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Restore node_modules cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Install if cache missed
+        run: npm ci --prefer-offline
+      - name: Check package.json is valid
+        run: node -e "require('./package.json'); console.log('✅ package.json OK')"
+      - name: Validate framework config
+        run: node -e "require('./config/framework.config'); console.log('✅ framework.config OK')"
+      - name: Validate policy config
+        run: node -e "require('./config/policy.config'); console.log('✅ policy.config OK')"
+      - name: Validate core modules load
+        run: |
+          node -e "
+            require('./src/core/policy-engine');
+            require('./src/core/confidence-scoring');
+            require('./src/telemetry/event-bus');
+            require('./src/memory/run-context-store');
+            require('./src/memory/selector-memory-store');
+            require('./src/memory/flow-memory-store');
+            console.log('✅ All core modules OK');
+          "
+
+  # ─────────────────────────────────────────────────────────
+  # JOB 3a: Data-Driven Healing Tests
+  # ─────────────────────────────────────────────────────────
+  test-data-healing:
+    name: 🩹 Data-Driven Healing
+    runs-on: ubuntu-latest
+    needs: [setup, lint]
+    env:
+      AI_PROVIDER: google
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+      AI_SELECTOR_MODEL: gemini-2.0-flash-lite
+      AI_FLOW_MODEL: gemini-2.0-flash-lite
+      CAPTURE_SCREENSHOTS: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Restore node_modules cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Install if cache missed
+        run: npm ci --prefer-offline
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+      - name: Run data-driven healing tests
+        run: npx playwright test tests/e2e/data-driven-healing.spec.js --reporter=json,list
+        continue-on-error: true
+      - name: Upload healing artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: healing-data-${{ github.run_number }}
+          path: |
+            test-results/healing-artifacts/
+            test-results/selector-memory.json
+          retention-days: 14
+          if-no-files-found: warn
+
+  # ─────────────────────────────────────────────────────────
+  # JOB 3b: Login Form Healing Tests
+  # ─────────────────────────────────────────────────────────
+  test-login-healing:
+    name: 🔐 Login Form Healing
+    runs-on: ubuntu-latest
+    needs: [setup, lint]
+    env:
+      AI_PROVIDER: google
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+      AI_SELECTOR_MODEL: gemini-2.0-flash-lite
+      AI_FLOW_MODEL: gemini-2.0-flash-lite
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Restore node_modules cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Install if cache missed
+        run: npm ci --prefer-offline
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+      - name: Run login healing tests
+        run: npx playwright test tests/e2e/login-form.spec.js --reporter=json,list
+        continue-on-error: true
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: healing-login-${{ github.run_number }}
+          path: test-results/healing-artifacts/
+          retention-days: 14
+          if-no-files-found: warn
+
+  # ─────────────────────────────────────────────────────────
+  # JOB 3c: Retail Role Flow Tests
+  # ─────────────────────────────────────────────────────────
+  test-retail:
+    name: 🛒 Retail Role Flows
+    runs-on: ubuntu-latest
+    needs: [setup, lint]
+    env:
+      AI_PROVIDER: google
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+      AI_SELECTOR_MODEL: gemini-2.0-flash-lite
+      AI_FLOW_MODEL: gemini-2.0-flash-lite
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Restore node_modules cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Install if cache missed
+        run: npm ci --prefer-offline
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+      - name: Run retail flow tests
+        run: npx playwright test tests/e2e/retail-role-flows.spec.js --reporter=json,list
+        continue-on-error: true
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: healing-retail-${{ github.run_number }}
+          path: test-results/healing-artifacts/
+          retention-days: 14
+          if-no-files-found: warn
+
+  # ─────────────────────────────────────────────────────────
+  # JOB 4: Aggregate Report
+  # ─────────────────────────────────────────────────────────
+  report:
+    name: 📊 Healing Report Summary
+    runs-on: ubuntu-latest
+    needs: [test-data-healing, test-login-healing, test-retail]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Download all healing artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-healing-artifacts/
+      - name: Generate aggregate JSON summary
+        run: |
+          node -e "
+            const fs = require('fs');
+            const path = require('path');
+            const base = 'all-healing-artifacts';
+            if (!fs.existsSync(base)) { console.log('No artifacts'); process.exit(0); }
+            let totalRuns = 0, heals = 0, flows = 0, failures = 0;
+            const walk = dir => {
+              if (!fs.existsSync(dir)) return;
+              for (const f of fs.readdirSync(dir)) {
+                const fp = path.join(dir, f);
+                if (fs.statSync(fp).isDirectory()) walk(fp);
+                else if (f === 'healing-report.json') {
+                  try {
+                    const d = JSON.parse(fs.readFileSync(fp,'utf8'));
+                    totalRuns++;
+                    heals += (d.events||[]).filter(e=>e.type==='selector_recovery_applied').length;
+                    flows += (d.events||[]).filter(e=>e.type==='flow_recovery_applied').length;
+                    failures += (d.events||[]).filter(e=>e.type==='step_failed').length;
+                  } catch(_) {}
+                }
+              }
+            };
+            walk(base);
+            const summary = { totalRuns, selectorHeals: heals, flowHeals: flows, failures, timeSavedHours: ((heals*0.5)+(flows*1.5)).toFixed(1), healRate: (((heals+flows)/Math.max(heals+flows+failures,1))*100).toFixed(1) };
+            fs.writeFileSync('ci-summary.json', JSON.stringify(summary, null, 2));
+            console.log('CI Pipeline Summary:');
+            console.log(JSON.stringify(summary, null, 2));
+          "
+      - name: Upload CI summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-summary-${{ github.run_number }}
+          path: ci-summary.json
+          retention-days: 30
+      - name: Post summary to job
+        run: |
+          if [ -f ci-summary.json ]; then
+            echo "## 🩹 Self-Healing CI Summary" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            node -e "
+              const d = JSON.parse(require('fs').readFileSync('ci-summary.json','utf8'));
+              console.log('| Total Healing Runs | ' + d.totalRuns + ' |');
+              console.log('| Selector Heals | ' + d.selectorHeals + ' |');
+              console.log('| Flow Recoveries | ' + d.flowHeals + ' |');
+              console.log('| Failures | ' + d.failures + ' |');
+              console.log('| Time Saved (Est.) | ' + d.timeSavedHours + 'h |');
+              console.log('| Heal Success Rate | ' + d.healRate + '% |');
+            " >> $GITHUB_STEP_SUMMARY
+          fi

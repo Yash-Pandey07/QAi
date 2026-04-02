@@ -1,0 +1,44 @@
+name: 🌙 Nightly — Full Regression + Adaptive Healing
+
+on:
+  schedule:
+    - cron: '0 1 * * *'   # 01:00 UTC every night (6:30 AM IST)
+  workflow_dispatch:
+
+env:
+  HEAL_MODE: adaptive
+  NODE_VERSION: '20'
+
+jobs:
+  nightly-full:
+    name: 🧪 Full Suite — Adaptive Mode
+    runs-on: ubuntu-latest
+    env:
+      AI_PROVIDER: google
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+      AI_SELECTOR_MODEL: gemini-2.0-flash-lite
+      AI_FLOW_MODEL: gemini-2.0-flash-lite
+      CAPTURE_SCREENSHOTS: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install npm dependencies
+        run: npm ci --prefer-offline
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+      - name: Run all E2E tests (adaptive healing)
+        run: npx playwright test --reporter=json,list
+        continue-on-error: true
+      - name: Upload full healing artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-healing-${{ github.run_number }}
+          path: |
+            test-results/healing-artifacts/
+            test-results/selector-memory.json
+          retention-days: 30
+          if-no-files-found: warn

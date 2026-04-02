@@ -1,0 +1,158 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SelfHealingRRP Dashboard</title>
+<meta name="description" content="Real-time monitor for the Self-Healing Playwright Framework" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#f3efe7;--ink:#151310;--paper:rgba(255,255,255,.72);--paper2:rgba(255,255,255,.9);--line:rgba(21,19,16,.12);--line2:rgba(21,19,16,.24);--muted:#6b6257;--brand:#c5522e;--brand2:#004f5a;--ok:#1f8a4d;--bad:#b93d33;--radius:16px;--mono:'IBM Plex Mono',monospace;--shadow:0 14px 44px rgba(20,15,10,.08)}
+html,body{min-height:100%}html{scroll-behavior:smooth}
+body{font-family:'Sora',sans-serif;color:var(--ink);background:radial-gradient(1200px 700px at 15% 15%,rgba(197,82,46,.16),transparent 65%),radial-gradient(900px 500px at 90% 0%,rgba(0,79,90,.2),transparent 70%),linear-gradient(180deg,#efe8dc 0%,#f8f4ed 55%,#f3efe7 100%)}
+.page{width:min(1320px,94vw);margin:1.1rem auto 1.8rem}.topbar{display:flex;align-items:center;justify-content:space-between;gap:1rem;background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:1rem 1.2rem;box-shadow:var(--shadow)}
+.brand{display:flex;gap:.85rem;align-items:center}.mark{width:40px;height:40px;border-radius:12px;background:linear-gradient(155deg,var(--brand),#df8358);color:#fff;display:grid;place-items:center;font-weight:800}.title{font-size:1.02rem;font-weight:700;letter-spacing:-.02em}.subtitle{color:var(--muted);font-size:.74rem;margin-top:2px}
+.top-right{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;justify-content:flex-end}.chip{border:1px solid var(--line);background:var(--paper2);border-radius:999px;padding:.36rem .72rem;font-size:.7rem;font-weight:600}.chip.live{border-color:rgba(31,138,77,.35);color:var(--ok);display:inline-flex;align-items:center;gap:.45rem}.chip.live::before{content:'';width:8px;height:8px;border-radius:999px;background:var(--ok);animation:pulse 1.6s infinite}.chip.branch{font-family:var(--mono);color:var(--brand2);border-color:rgba(0,79,90,.3)}.chip.updated{color:var(--muted)}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(31,138,77,.5)}70%{box-shadow:0 0 0 8px rgba(31,138,77,0)}100%{box-shadow:0 0 0 0 rgba(31,138,77,0)}}
+.tabs{margin-top:.9rem;display:flex;gap:.45rem;overflow-x:auto;padding:.15rem}.tab-btn{border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:10px;padding:.56rem .95rem;font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap;transition:160ms}.tab-btn:hover{border-color:var(--line2);color:var(--ink)}.tab-btn.active{color:#fff;border-color:transparent;background:linear-gradient(160deg,var(--brand),#b94828)}
+.content{margin-top:1rem}.tab-panel{display:none}.tab-panel.active{display:block}
+.hero{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:1rem 1.1rem;margin-bottom:.95rem;display:grid;grid-template-columns:1.5fr 1fr;gap:.9rem}.hero h1{font-size:1.18rem;letter-spacing:-.02em}.hero p{font-size:.82rem;color:var(--muted);margin-top:.35rem;line-height:1.5}.hero-metrics{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end;align-content:center}.h-chip{border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.85);padding:.45rem .6rem;min-width:122px}.h-label{font-size:.63rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}.h-value{font-family:var(--mono);font-size:.86rem;margin-top:.25rem}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:.78rem;margin-bottom:.95rem}.kpi{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:.88rem;box-shadow:var(--shadow);position:relative;overflow:hidden}.kpi:before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--brand),transparent)}.kpi-label{color:var(--muted);font-size:.63rem;text-transform:uppercase;letter-spacing:.08em;font-weight:600}.kpi-value{margin-top:.42rem;font-size:2rem;font-weight:800;letter-spacing:-.045em;line-height:1}.kpi-sub{margin-top:.32rem;color:var(--muted);font-size:.68rem}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-bottom:.85rem}.row.full{grid-template-columns:1fr}.panel{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}.ph{border-bottom:1px solid var(--line);padding:.78rem .95rem;display:flex;justify-content:space-between;align-items:center;gap:.6rem}.ph-title{font-size:.79rem;font-weight:700;letter-spacing:.02em}.badge{border-radius:999px;border:1px solid var(--line);padding:.25rem .5rem;font-size:.64rem;font-family:var(--mono);color:var(--brand2);background:#fff}.pb{padding:.88rem .95rem}
+.empty{text-align:center;color:var(--muted);font-size:.8rem;padding:1.7rem .8rem}.sk{height:12px;border-radius:999px;background:linear-gradient(90deg,rgba(0,0,0,.07),rgba(0,0,0,.13),rgba(0,0,0,.07));background-size:180% 100%;animation:shimmer 1.6s infinite}@keyframes shimmer{to{background-position:-180% 0}}
+.commit{display:grid;grid-template-columns:66px 1fr auto;align-items:center;gap:.72rem;padding:.58rem 0;border-bottom:1px solid rgba(0,0,0,.06)}.commit:last-child{border-bottom:none}.chash{font-family:var(--mono);font-size:.66rem;color:var(--brand2);background:rgba(0,79,90,.1);border:1px solid rgba(0,79,90,.2);padding:.2rem .35rem;border-radius:6px;text-align:center}.cmsg{font-size:.79rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cauthor{margin-top:.2rem;color:var(--muted);font-size:.67rem}.cdate{color:var(--muted);font-size:.66rem;font-family:var(--mono)}.cref{margin-left:.3rem;border-radius:6px;padding:.14rem .3rem;background:rgba(126,62,170,.1);color:#6a2e8f;font-family:var(--mono);font-size:.62rem}
+.stat-pill-row{display:flex;gap:.5rem;flex-wrap:wrap}.stat-pill{border:1px solid var(--line);border-radius:999px;padding:.32rem .56rem;font-size:.68rem;font-family:var(--mono);background:#fff}.stat-pill.add{color:var(--ok);border-color:rgba(31,138,77,.35)}.stat-pill.del{color:var(--bad);border-color:rgba(185,61,51,.35)}.stat-pill.file{color:var(--brand2);border-color:rgba(0,79,90,.28)}
+.file-list{margin-top:.72rem;display:grid;gap:.35rem}.file-item{display:flex;align-items:center;gap:.5rem;font-family:var(--mono);font-size:.7rem;padding:.44rem .52rem;border:1px dashed rgba(0,0,0,.12);border-radius:8px;background:rgba(255,255,255,.8)}.file-status{min-width:24px;text-align:center;border-radius:6px;border:1px solid rgba(0,79,90,.25);color:var(--brand2);background:rgba(0,79,90,.09);padding:.1rem .2rem}
+.contrib{display:grid;grid-template-columns:34px 1fr auto;gap:.56rem;align-items:center;margin-bottom:.55rem}.cavatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(140deg,#0f7080,#c5522e);color:#fff;font-weight:700;font-size:.75rem}.cname{font-size:.79rem;font-weight:600}.cemail{font-size:.64rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cbar-wrap{margin-top:.24rem;width:100%;height:4px;border-radius:999px;background:rgba(0,0,0,.08);overflow:hidden}.cbar{height:100%;border-radius:inherit;background:linear-gradient(90deg,#0f7080,#c5522e)}.ccount{font-size:.66rem;color:var(--muted);font-family:var(--mono);white-space:nowrap}
+.run-card{border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.86);padding:.7rem .76rem;margin-bottom:.55rem;cursor:pointer;transition:transform .14s,border-color .14s}.run-card:hover{transform:translateY(-1px);border-color:var(--line2)}.run-card.active{border-color:rgba(197,82,46,.46);box-shadow:inset 0 0 0 1px rgba(197,82,46,.28)}.run-name{font-size:.71rem;font-family:var(--mono);color:var(--brand2)}.run-meta{font-size:.67rem;color:var(--muted);margin-top:.24rem}.run-pills{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.45rem}.pill{font-size:.62rem;border-radius:999px;padding:.15rem .42rem;border:1px solid;font-family:var(--mono)}.pill.ok{color:var(--ok);border-color:rgba(31,138,77,.35);background:rgba(31,138,77,.09)}.pill.info{color:var(--brand2);border-color:rgba(0,79,90,.35);background:rgba(0,79,90,.1)}.pill.warn{color:#6a2e8f;border-color:rgba(106,46,143,.35);background:rgba(106,46,143,.1)}.pill.bad{color:var(--bad);border-color:rgba(185,61,51,.35);background:rgba(185,61,51,.1)}
+.timeline{position:relative}.timeline:before{content:'';position:absolute;top:0;bottom:0;left:14px;width:1px;background:rgba(0,0,0,.16)}.tl-item{display:grid;grid-template-columns:28px 1fr;gap:.54rem;padding:.42rem 0}.tl-dot{width:9px;height:9px;border-radius:50%;margin:3px auto;z-index:1}.tl-dot.ok{background:var(--ok);box-shadow:0 0 0 4px rgba(31,138,77,.15)}.tl-dot.bad{background:var(--bad);box-shadow:0 0 0 4px rgba(185,61,51,.15)}.tl-dot.info{background:var(--brand2);box-shadow:0 0 0 4px rgba(0,79,90,.14)}.tl-type{font-size:.73rem;font-weight:700}.tl-type.ok{color:var(--ok)}.tl-type.bad{color:var(--bad)}.tl-type.info{color:var(--brand2)}.tl-meta{margin-top:.15rem;font-size:.65rem;color:var(--muted)}.tl-sub{margin-top:.4rem;font-family:var(--mono);font-size:.64rem;background:rgba(255,255,255,.78);border:1px dashed rgba(0,0,0,.13);border-radius:8px;padding:.34rem .45rem}.tl-sub .old{color:var(--bad);text-decoration:line-through}.tl-sub .new{color:var(--ok);margin-top:.2rem}
+.mtable{width:100%;border-collapse:collapse;font-size:.73rem}.mtable th{position:sticky;top:0;background:#faf8f3;z-index:1;text-align:left;color:var(--muted);font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;padding:.55rem;border-bottom:1px solid var(--line)}.mtable td{padding:.6rem .55rem;border-bottom:1px solid rgba(0,0,0,.08);vertical-align:top}.mtable tr:hover td{background:rgba(255,255,255,.82)}.mtag{display:inline-block;border-radius:6px;border:1px solid rgba(0,0,0,.18);background:rgba(255,255,255,.85);padding:.16rem .34rem;font-family:var(--mono);font-size:.67rem;max-width:360px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mtag.bad{border-color:rgba(185,61,51,.3);background:rgba(185,61,51,.08);color:var(--bad)}.mtag.ok{border-color:rgba(31,138,77,.35);background:rgba(31,138,77,.1);color:var(--ok)}.cbar-wrap-2{margin-top:.28rem;width:100%;height:4px;border-radius:999px;background:rgba(0,0,0,.1);overflow:hidden}.cbar-2{height:100%;border-radius:inherit;background:linear-gradient(90deg,#1f8a4d,#0f7080)}
+.chart-wrap{height:190px;position:relative}canvas{width:100%!important}#toasts{position:fixed;right:1rem;bottom:1rem;display:flex;flex-direction:column;gap:.5rem;align-items:flex-end;z-index:50}.toast{border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.94);color:var(--ink);padding:.55rem .72rem;font-size:.76rem;box-shadow:0 9px 24px rgba(0,0,0,.11)}.toast.ok{border-left:3px solid var(--ok)}.toast.info{border-left:3px solid var(--brand2)}
+@media(max-width:1020px){.hero{grid-template-columns:1fr}.hero-metrics{justify-content:flex-start}.row{grid-template-columns:1fr}}
+@media(max-width:760px){.page{width:96vw;margin:.65rem auto 1rem}.topbar{padding:.8rem}.title{font-size:.93rem}.chip{font-size:.64rem}.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi-value{font-size:1.4rem}.commit{grid-template-columns:58px 1fr}.cdate{grid-column:2}.chart-wrap{height:170px}}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">SH</div>
+      <div>
+        <div class="title">SelfHealingRRP Dashboard</div>
+        <div class="subtitle">Agentic Playwright Framework telemetry</div>
+      </div>
+    </div>
+    <div class="top-right">
+      <div class="chip branch" id="branch-tag">branch: main</div>
+      <div class="chip live">LIVE</div>
+      <div class="chip updated" id="upd">starting...</div>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="Sections">
+    <button class="tab-btn active" data-tab="overview">Overview</button>
+    <button class="tab-btn" data-tab="git">Git Activity</button>
+    <button class="tab-btn" data-tab="healing">Healing Runs</button>
+    <button class="tab-btn" data-tab="memory">Selector Memory</button>
+  </nav>
+
+  <main class="content">
+    <section class="tab-panel active" id="panel-overview">
+      <div class="hero">
+        <div>
+          <h1>Reliability at a glance</h1>
+          <p>Track framework healing, watch repository movement, and verify whether self-healing signals are improving build stability. This board updates every 10 seconds and reacts to stream events.</p>
+        </div>
+        <div class="hero-metrics">
+          <div class="h-chip"><div class="h-label">Branch</div><div class="h-value" id="hero-branch">main</div></div>
+          <div class="h-chip"><div class="h-label">Latest Update</div><div class="h-value" id="hero-updated">--</div></div>
+          <div class="h-chip"><div class="h-label">Tracked Commits</div><div class="h-value" id="hero-commits">0</div></div>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-label">Total Runs</div><div class="kpi-value" id="k-runs">-</div><div class="kpi-sub">artifact directories analyzed</div></div>
+        <div class="kpi"><div class="kpi-label">Selector Repairs</div><div class="kpi-value" id="k-sh">-</div><div class="kpi-sub">broken selectors auto-fixed</div></div>
+        <div class="kpi"><div class="kpi-label">Flow Recoveries</div><div class="kpi-value" id="k-fh">-</div><div class="kpi-sub">unstable flows recovered</div></div>
+        <div class="kpi"><div class="kpi-label">Time Saved</div><div class="kpi-value" id="k-ts">-</div><div class="kpi-sub">estimated debugging hours</div></div>
+        <div class="kpi"><div class="kpi-label">Failures</div><div class="kpi-value" id="k-fail">-</div><div class="kpi-sub">events not healed</div></div>
+        <div class="kpi"><div class="kpi-label">Heal Success Rate</div><div class="kpi-value" id="k-rate">-</div><div class="kpi-sub">successful recovery ratio</div></div>
+      </div>
+
+      <div class="row full"><div class="panel"><div class="ph"><span class="ph-title">Healing Activity (latest 14 runs)</span></div><div class="pb"><div class="chart-wrap"><canvas id="chart-bar"></canvas></div></div></div></div>
+      <div class="row">
+        <div class="panel"><div class="ph"><span class="ph-title">Live Event Stream</span></div><div class="pb" style="max-height:320px;overflow-y:auto" id="o-stream"><div class="empty">Waiting for test activity...</div></div></div>
+        <div class="panel"><div class="ph"><span class="ph-title">Latest Commits</span><span class="badge" id="o-commit-count">0</span></div><div class="pb" id="o-commits"><div class="sk"></div><div class="sk" style="width:72%;margin-top:8px"></div></div></div>
+      </div>
+    </section>
+    <section class="tab-panel" id="panel-git">
+      <div class="row">
+        <div class="panel"><div class="ph"><span class="ph-title">Current Changes</span></div><div class="pb"><div id="g-diff" class="stat-pill-row"><span class="stat-pill file">0 files changed</span></div><div id="g-files" class="file-list"></div></div></div>
+        <div class="panel"><div class="ph"><span class="ph-title">Main Contributors</span></div><div class="pb" id="g-contribs"><div class="sk"></div></div></div>
+      </div>
+      <div class="panel"><div class="ph"><span class="ph-title">Repository History</span><span class="badge" id="g-commit-count">0</span></div><div class="pb" id="g-commits"><div class="sk"></div><div class="sk" style="width:65%;margin-top:8px"></div></div></div>
+    </section>
+
+    <section class="tab-panel" id="panel-healing">
+      <div class="row">
+        <div class="panel"><div class="ph"><span class="ph-title">Healing Log</span><span class="badge" id="h-count">0</span></div><div class="pb" id="h-runs" style="max-height:620px;overflow-y:auto"><div class="sk"></div></div></div>
+        <div class="panel"><div class="ph"><span class="ph-title">Detailed Event Trace</span></div><div class="pb" id="h-events" style="max-height:620px;overflow-y:auto"><div class="empty">Select a run from the left to inspect events</div></div></div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="panel-memory">
+      <div class="panel">
+        <div class="ph"><span class="ph-title">Healed Selector Memory Store</span><span class="badge" id="m-count">0</span></div>
+        <div class="pb" style="overflow-x:auto;max-height:72vh">
+          <table class="mtable">
+            <thead><tr><th>Context</th><th>Original Selector</th><th>Active Selector</th><th>Strategy</th><th>Confidence</th><th>Count</th><th>Last Verified</th></tr></thead>
+            <tbody id="m-body"><tr><td colspan="7"><div class="sk"></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<div id="toasts"></div>
+
+<script>
+const S={stats:{},commits:[],status:{},contributors:[],runs:[],memory:{},stream:[],selectedRun:null};
+const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const ago=d=>{if(!d)return'';const s=Math.floor((Date.now()-new Date(d))/1000);if(s<60)return s+'s ago';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago'};
+const fmtDur=ms=>{if(!ms)return'-';const s=Math.floor(ms/1000);if(s<60)return s+'s';return Math.floor(s/60)+'m '+(s%60)+'s'};
+function setUpd(t){document.getElementById('upd').textContent=t;document.getElementById('hero-updated').textContent=t}
+function toast(msg,kind='info'){const el=document.createElement('div');el.className=`toast ${kind}`;el.textContent=msg;document.getElementById('toasts').appendChild(el);setTimeout(()=>el.remove(),4000)}
+
+document.querySelectorAll('.tab-btn').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));btn.classList.add('active');document.getElementById('panel-'+btn.dataset.tab)?.classList.add('active')}));
+
+function connectSSE(){const es=new EventSource('/events');es.addEventListener('connected',()=>setUpd('connected'));es.addEventListener('git_update',e=>{const d=JSON.parse(e.data||'{}');toast(d.latest?.subject?`New commit: ${d.latest.subject.slice(0,70)}`:'Git update received','info');fetchAll()});es.addEventListener('healing_update',()=>{toast('New healing run detected','ok');fetchAll()});es.onerror=()=>{setUpd('reconnecting...');setTimeout(connectSSE,6000)}}
+
+async function fetchAll(){setUpd('refreshing...');await Promise.all([
+fetch('/api/stats',{cache:'no-store'}).then(r=>r.json()).then(d=>{S.stats=d;renderStats()}),
+fetch('/api/git',{cache:'no-store'}).then(r=>r.json()).then(d=>{S.commits=d.commits||[];S.status=d.status||{};S.contributors=d.contributors||[];renderGit()}),
+fetch('/api/healing',{cache:'no-store'}).then(r=>r.json()).then(d=>{S.runs=d.runs||[];renderHealing();renderBarChart();if(S.selectedRun===null&&S.runs.length)selectRun(0)}),
+fetch('/api/memory',{cache:'no-store'}).then(r=>r.json()).then(d=>{S.memory=d||{};renderMemory()})
+]);setUpd('updated '+new Date().toLocaleTimeString())}
+
+function renderStats(){const s=S.stats||{};const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v??'-'};set('k-runs',s.totalRuns??0);set('k-sh',s.totalSelectorHeals??0);set('k-fh',s.totalFlowHeals??0);set('k-ts',`${s.estimatedTimeSaved||'0'}h`);set('k-fail',s.totalFailures??0);set('k-rate',`${s.healSuccessRate||'0'}%`);const branch=s.gitBranch||'unknown';document.getElementById('branch-tag').textContent=`branch: ${branch}`;document.getElementById('hero-branch').textContent=branch;document.getElementById('hero-commits').textContent=String(S.commits.length||0)}
+
+function renderCommitList(id,commits,limit=999){const el=document.getElementById(id);if(!el)return;if(!commits?.length){el.innerHTML='<div class="empty">No commit history available</div>';return}el.innerHTML=commits.slice(0,limit).map(c=>`<div class="commit"><div class="chash">${esc((c.hash||'').slice(0,7))}</div><div><div class="cmsg">${esc(c.subject||'')}${c.refs?`<span class="cref">${esc(c.refs)}</span>`:''}</div><div class="cauthor">${esc(c.author||'')} &lt;${esc(c.email||'')}&gt;</div></div><div class="cdate">${ago(c.date)}</div></div>`).join('')}
+
+function renderGit(){renderCommitList('o-commits',S.commits,5);renderCommitList('g-commits',S.commits);document.getElementById('o-commit-count').textContent=String(S.commits.length||0);document.getElementById('g-commit-count').textContent=String(S.commits.length||0);document.getElementById('hero-commits').textContent=String(S.commits.length||0);const ds=S.status?.diffStats||{};document.getElementById('g-diff').innerHTML=`<span class="stat-pill file">${ds.files||0} files changed</span><span class="stat-pill add">+${ds.added||0} insertions</span><span class="stat-pill del">-${ds.deleted||0} deletions</span>`;const ch=S.status?.changedFiles||[];const fe=document.getElementById('g-files');fe.innerHTML=ch.length?ch.map(f=>`<div class="file-item"><span class="file-status">${esc(f.status||'')}</span><span>${esc(f.file||'')}</span></div>`).join(''):'<div class="file-item" style="border-style:solid;color:var(--ok)">Working tree clean</div>';const c=S.contributors||[];const max=c[0]?.commits||1;const ce=document.getElementById('g-contribs');ce.innerHTML=c.length?c.map(x=>`<div class="contrib"><div class="cavatar">${esc((x.name||'?').charAt(0).toUpperCase())}</div><div style="min-width:0"><div class="cname">${esc(x.name||'')}</div><div class="cemail">${esc(x.email||'')}</div><div class="cbar-wrap"><div class="cbar" style="width:${Math.round((x.commits/max)*100)}%"></div></div></div><div class="ccount">${x.commits||0} commits</div></div>`).join(''):'<div class="empty">No contributor data available</div>'}
+function renderHealing(){document.getElementById('h-count').textContent=String(S.runs.length||0);const list=document.getElementById('h-runs');if(!S.runs.length){list.innerHTML='<div class="empty">No healing artifacts found yet</div>';document.getElementById('h-events').innerHTML='<div class="empty">Run events will appear here once available</div>';S.selectedRun=null;return}if(S.selectedRun===null||S.selectedRun>=S.runs.length)S.selectedRun=0;list.innerHTML=S.runs.map((r,i)=>`<div class="run-card ${i===S.selectedRun?'active':''}" data-run-index="${i}"><div class="run-name">${esc(r.runId)}</div><div class="run-meta">${r.runStartedAt?new Date(r.runStartedAt).toLocaleString():'-'} | duration ${fmtDur(r.durationMs)}</div><div class="run-pills">${r.selectorHeals?`<span class="pill ok">selector ${r.selectorHeals}</span>`:''}${r.flowHeals?`<span class="pill info">flow ${r.flowHeals}</span>`:''}${r.failures?`<span class="pill bad">fail ${r.failures}</span>`:''}${r.testsCompleted?`<span class="pill warn">tests ${r.testsCompleted}</span>`:''}</div></div>`).join('');list.querySelectorAll('.run-card').forEach(card=>card.addEventListener('click',()=>selectRun(Number(card.getAttribute('data-run-index')))));selectRun(S.selectedRun,false)}
+
+function selectRun(idx,syncCards=true){const run=S.runs[idx];if(!run)return;S.selectedRun=idx;if(syncCards){document.querySelectorAll('.run-card').forEach(c=>c.classList.remove('active'));document.querySelector(`.run-card[data-run-index="${idx}"]`)?.classList.add('active')}const el=document.getElementById('h-events');const events=run.events||[];if(!events.length){el.innerHTML='<div class="empty">No events logged for this run</div>';return}el.innerHTML='<div class="timeline">'+events.map(e=>{const healed=e.type?.includes('applied');const failed=e.type?.includes('failed')||e.type?.includes('rejected');const cls=healed?'ok':(failed?'bad':'info');const sel=e.payload?.originalSelector?`<div class="tl-sub"><div class="old">${esc(e.payload.originalSelector)}</div><div class="new">${esc(e.payload.healedSelector||'')}</div></div>`:'';const strat=e.payload?.strategy?`<div class="tl-meta">strategy: ${esc(e.payload.strategy)}</div>`:'';return `<div class="tl-item"><div><div class="tl-dot ${cls}"></div></div><div><div class="tl-type ${cls}">${esc((e.type||'').replace(/_/g,' ').toUpperCase())}</div><div class="tl-meta">${esc(e.testId||'System')} | ${e.timestamp?new Date(e.timestamp).toLocaleTimeString():''}</div>${strat}${sel}</div></div>`}).join('')+'</div>';if(events.length)pushStream(events[events.length-1])}
+
+function renderMemory(){const entries=Object.entries(S.memory||{});document.getElementById('m-count').textContent=String(entries.length);const body=document.getElementById('m-body');if(!entries.length){body.innerHTML='<tr><td colspan="7"><div class="empty">No memory entries yet</div></td></tr>';return}body.innerHTML=entries.flatMap(([k,recs])=>{const p=k.split('::');const url=p[0]||'';const desc=p[2]||k;return (recs||[]).map(r=>{const c=((r.confidence||0)*100).toFixed(0);return `<tr><td style="max-width:210px"><div style="font-weight:600;font-size:.71rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(k)}">${esc(desc.slice(0,60))}</div><div style="color:var(--muted);font-size:.64rem;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(url.replace('https://','').slice(0,55))}</div></td><td><span class="mtag bad">${esc(r.originalSelector||'')}</span></td><td><span class="mtag ok">${esc(r.selector||'')}</span></td><td style="font-family:var(--mono);color:#6a2e8f;font-size:.68rem">${esc(r.strategy||'')}</td><td><div style="font-family:var(--mono);color:var(--ok)">${c}%</div><div class="cbar-wrap-2"><div class="cbar-2" style="width:${c}%"></div></div></td><td style="font-family:var(--mono);color:var(--brand2)">${r.timesUsed||0}</td><td style="color:var(--muted)">${ago(r.lastUsed)}</td></tr>`})}).join('')}
+
+function pushStream(evt){if(!evt)return;S.stream.unshift(evt);if(S.stream.length>30)S.stream.pop();const el=document.getElementById('o-stream');el.innerHTML='<div class="timeline">'+S.stream.slice(0,16).map(e=>{const healed=e.type?.includes('applied');const failed=e.type?.includes('failed')||e.type?.includes('rejected');const cls=healed?'ok':(failed?'bad':'info');return `<div class="tl-item"><div><div class="tl-dot ${cls}"></div></div><div><div class="tl-type ${cls}">${esc((e.type||'').replace(/_/g,' ').toUpperCase())}</div><div class="tl-meta">${esc(e.testId||'System')} | ${e.timestamp?new Date(e.timestamp).toLocaleTimeString():''}</div></div></div>`}).join('')+'</div>'}
+
+function renderBarChart(){const canvas=document.getElementById('chart-bar');if(!canvas)return;const ctx=canvas.getContext('2d');const ratio=window.devicePixelRatio||1;canvas.width=Math.max(1,Math.floor(canvas.offsetWidth*ratio));canvas.height=Math.max(1,Math.floor(canvas.offsetHeight*ratio));ctx.setTransform(ratio,0,0,ratio,0,0);const W=canvas.offsetWidth,H=canvas.offsetHeight,pad={t:16,r:18,b:36,l:34};ctx.clearRect(0,0,W,H);const runs=S.runs.slice(0,14).reverse();if(!runs.length){ctx.fillStyle='#6b6257';ctx.font='12px Sora';ctx.textAlign='center';ctx.fillText('No data yet',W/2,H/2);return}const vals=runs.map(r=>(r.selectorHeals||0)+(r.flowHeals||0));const maxV=Math.max(...vals,1),plotW=W-pad.l-pad.r,plotH=H-pad.t-pad.b,step=plotW/runs.length,barW=Math.min(30,step*.58);ctx.strokeStyle='rgba(0,0,0,.1)';ctx.lineWidth=1;[.25,.5,.75,1].forEach(f=>{const y=pad.t+plotH*(1-f);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+plotW,y);ctx.stroke();ctx.fillStyle='#6b6257';ctx.font='10px Sora';ctx.textAlign='right';ctx.fillText(String(Math.round(maxV*f)),pad.l-5,y+3)});runs.forEach((run,i)=>{const v=vals[i],bh=Math.max(3,plotH*(v/maxV)),x=pad.l+i*step+step/2-barW/2,y=pad.t+plotH-bh;const g=ctx.createLinearGradient(0,y,0,y+bh);if((run.failures||0)>0){g.addColorStop(0,'#ce6045');g.addColorStop(1,'#a84334')}else{g.addColorStop(0,'#219050');g.addColorStop(1,'#127a80')}ctx.fillStyle=g;if(ctx.roundRect){ctx.beginPath();ctx.roundRect(x,y,barW,bh,[6,6,0,0]);ctx.fill()}else{ctx.fillRect(x,y,barW,bh)}const lbl=new Date(run.runStartedAt||0).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});ctx.fillStyle='#6b6257';ctx.font='9px IBM Plex Mono';ctx.textAlign='center';ctx.fillText(lbl,x+barW/2,pad.t+plotH+16)})}
+
+window.addEventListener('DOMContentLoaded',()=>{connectSSE();fetchAll();setInterval(fetchAll,10000);window.addEventListener('resize',renderBarChart)});
+</script>
+</body>
+</html>
