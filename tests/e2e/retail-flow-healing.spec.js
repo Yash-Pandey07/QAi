@@ -56,14 +56,14 @@ test.describe('Retail Website - Complete Flow with Self-Healing', () => {
       await orchestrator.click(REAL_SEL.signInButton, {
         description: 'Sign in button',
       });
-      await orchestrator.waitForURL(/\/dashboard/);
+      await orchestrator.waitForURL(/\/dashboard/, { timeout: 30000 });
 
       // 3. Navigate to Products
       console.log('[Baseline] Step 3: Navigating to Products...');
       await orchestrator.click(REAL_SEL.productsLink, {
         description: 'Products navigation link in sidebar',
       });
-      await orchestrator.waitForURL(/\/products/);
+      await orchestrator.waitForURL(/\/products/, { timeout: 30000 });
 
       // 4. Add item to cart
       console.log('[Baseline] Step 4: Adding product to cart...');
@@ -76,14 +76,14 @@ test.describe('Retail Website - Complete Flow with Self-Healing', () => {
       await orchestrator.click(REAL_SEL.cartLink, {
         description: 'Cart navigation link in sidebar',
       });
-      await orchestrator.waitForURL(/\/cart/);
+      await orchestrator.waitForURL(/\/cart/, { timeout: 30000 });
 
       // 6. Proceed to Checkout
       console.log('[Baseline] Step 6: Clicking Checkout...');
       await orchestrator.click(REAL_SEL.checkoutBtn, {
         description: 'Checkout button on cart page',
       });
-      await orchestrator.waitForURL(/\/checkout/);
+      await orchestrator.waitForURL(/\/checkout/, { timeout: 30000 });
 
       // 7. Place Order (Pay)
       console.log('[Baseline] Step 7: Clicking Pay button...');

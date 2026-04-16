@@ -289,6 +289,10 @@ class TestOrchestrator {
         `[TestOrchestrator] Step failed: ${action} "${selector}" – ${originalError.message}`
       );
 
+      if (process.env.DEMO_MODE === 'true') {
+        await this._showVisualOverlay('error', `❌ Broken Selector: ${selector}<br/>AI taking over...`);
+      }
+
       if (!this.healingEnabled) {
         this.runContext.recordStep({ stepId, action, selector, result: 'fail' });
         throw originalError;
@@ -427,6 +431,10 @@ class TestOrchestrator {
       console.log(
         `[TestOrchestrator] Applying healed selector candidate: ${candidate.selector}`
       );
+
+      if (process.env.DEMO_MODE === 'true') {
+        await this._showVisualOverlay('success', `✅ AI Healed!<br/>Found: ${candidate.selector}`, candidate.selector);
+      }
 
       try {
         await this._performAction(action, candidate.selector, value, timeout);
@@ -671,6 +679,76 @@ class TestOrchestrator {
   // ═══════════════════════════════════════════════════════════════════════
   //  HELPERS
   // ═══════════════════════════════════════════════════════════════════════
+
+  async _showVisualOverlay(status, message, locatorStr = null) {
+    try {
+      if (locatorStr) {
+        // Highlight element and show toast
+        const loc = this._resolveLocator(locatorStr).first();
+        await loc.evaluate((node, msg) => {
+          // store old styles
+          node.dataset.oldOutline = node.style.outline || '';
+          node.dataset.oldBoxShadow = node.style.boxShadow || '';
+          // apply new styles
+          node.style.outline = '4px solid #00FF00';
+          node.style.boxShadow = '0 0 15px #00FF00';
+          
+          const toast = document.createElement('div');
+          toast.id = 'demo-toast-overlay';
+          toast.innerHTML = msg;
+          toast.style.position = 'fixed';
+          toast.style.bottom = '20px';
+          toast.style.right = '20px';
+          toast.style.backgroundColor = 'rgba(0,0,0,0.85)';
+          toast.style.color = '#00FF00';
+          toast.style.padding = '15px 25px';
+          toast.style.borderRadius = '8px';
+          toast.style.zIndex = '999999';
+          toast.style.fontFamily = 'monospace';
+          toast.style.fontSize = '18px';
+          toast.style.boxShadow = '0 4px 12px rgba(0,255,0,0.3)';
+          document.body.appendChild(toast);
+
+          setTimeout(() => {
+             // cleanup
+             node.style.outline = node.dataset.oldOutline;
+             node.style.boxShadow = node.dataset.oldBoxShadow;
+             const el = document.getElementById('demo-toast-overlay');
+             if (el) el.remove();
+          }, 4000);
+        }, message).catch(() => {});
+        await this.page.waitForTimeout(3000); 
+      } else {
+        // Just show toast
+        await this.page.evaluate((msg) => {
+          const toast = document.createElement('div');
+          toast.id = 'demo-toast-overlay-error';
+          toast.innerHTML = msg;
+          toast.style.position = 'fixed';
+          toast.style.bottom = '20px';
+          toast.style.right = '20px';
+          toast.style.backgroundColor = 'rgba(40,0,0,0.9)';
+          toast.style.border = '2px solid #FF0000';
+          toast.style.color = '#FF0000';
+          toast.style.padding = '15px 25px';
+          toast.style.borderRadius = '8px';
+          toast.style.zIndex = '999999';
+          toast.style.fontFamily = 'monospace';
+          toast.style.fontSize = '18px';
+          toast.style.boxShadow = '0 4px 12px rgba(255,0,0,0.3)';
+          document.body.appendChild(toast);
+
+          setTimeout(() => {
+             const el = document.getElementById('demo-toast-overlay-error');
+             if (el) el.remove();
+          }, 4000);
+        }, message).catch(() => {});
+        await this.page.waitForTimeout(3000);
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
 
   _getSelectorAgent() {
     if (!this.selectorAgent) {
