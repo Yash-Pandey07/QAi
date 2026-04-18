@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -195,6 +195,41 @@ jobs:
             dashboard/public
             ci-summary.json
           retention-days: 30
+      - name: Clone dashboard history branch
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          REPO_URL: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+        run: |
+          if ! git clone --depth 1 --branch dashboard-data "$REPO_URL" dashboard-history; then
+            git clone --depth 1 "$REPO_URL" dashboard-history
+            cd dashboard-history
+            git checkout --orphan dashboard-data
+            find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+            mkdir -p runs
+            printf '[]\n' > history.json
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .
+            git commit -m "Initialize dashboard history branch"
+            git push origin dashboard-data
+            cd ..
+          fi
+      - name: Persist run data to dashboard history branch
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: node src/tools/persist-dashboard-history.js --source dashboard/public/data/dashboard-data.json --history-dir dashboard-history
+      - name: Commit dashboard history
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          cd dashboard-history
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add history.json latest.json runs
+          if git diff --cached --quiet; then
+            echo "No dashboard history changes to commit"
+            exit 0
+          fi
+          git commit -m "Store dashboard data for run ${{ github.run_id }}"
+          git push origin dashboard-data
       - name: Post summary to job
         run: |
           if [ -f ci-summary.json ]; then

@@ -19,7 +19,8 @@
     "report": "npx playwright show-report",
     "sync-heals": "node src/tools/sync-to-source.js",
     "dashboard": "node dashboard/server.js",
-    "dashboard:data": "node src/tools/generate-dashboard-data.js"
+    "dashboard:data": "node src/tools/generate-dashboard-data.js",
+    "dashboard:history": "node src/tools/persist-dashboard-history.js"
   },
   "keywords": [
     "playwright",
