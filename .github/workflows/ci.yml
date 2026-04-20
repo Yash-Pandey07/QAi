@@ -102,6 +102,7 @@ jobs:
       GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
       AI_SELECTOR_MODEL: ${{ secrets.AI_SELECTOR_MODEL }}
       AI_FLOW_MODEL: ${{ secrets.AI_FLOW_MODEL }}
+      DEMO_MODE: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
