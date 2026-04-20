@@ -124,6 +124,13 @@ jobs:
       - name: Run retail flow tests
         run: node src/tools/record-playwright-run.js --output-name retail-p0-suite-ci -- npm run test:retail:p0:headed -- --reporter=json,list
         continue-on-error: true
+      - name: List suite video output
+        if: always()
+        run: |
+          echo "Listing run video directory"
+          ls -R test-results/run-videos || true
+          echo "Listing top-level test-results contents"
+          ls -R test-results || true
       - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4

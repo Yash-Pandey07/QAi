@@ -98,8 +98,12 @@ function startRecorder(outputPath) {
     windowsHide: true,
   });
 
-  recorder.stderr.on('data', () => {});
-  recorder.stdout.on('data', () => {});
+  recorder.stderr.on('data', (chunk) => {
+    process.stderr.write(`[suite-recorder] ${chunk}`);
+  });
+  recorder.stdout.on('data', (chunk) => {
+    process.stdout.write(`[suite-recorder] ${chunk}`);
+  });
   return recorder;
 }
 
@@ -165,6 +169,15 @@ async function main() {
     exitCode = await runCommand(command);
   } finally {
     await stopRecorder(recorder);
+  }
+
+  if (!fs.existsSync(outputPath)) {
+    throw new Error(`Suite video was not created at expected path: ${outputPath}`);
+  }
+
+  const stats = fs.statSync(outputPath);
+  if (!stats.size) {
+    throw new Error(`Suite video exists but is empty: ${outputPath}`);
   }
 
   console.log(`Suite video saved at: ${outputPath}`);
