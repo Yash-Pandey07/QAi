@@ -189,6 +189,8 @@ function main() {
     contributors: git.contributors,
     runs: runs.slice(0, 50),
     memory: selectedMemory,
+    // Relative path served via GitHub Pages; dashboard will probe with HEAD before showing the player
+    latestRunVideo: 'videos/latest-run.webm',
   };
 
   fs.writeFileSync(

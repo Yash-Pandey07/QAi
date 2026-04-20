@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -33,6 +33,7 @@ body{font-family:'Sora',sans-serif;color:var(--ink);background:radial-gradient(1
 .chart-meta{display:flex;justify-content:space-between;gap:.75rem;flex-wrap:wrap;margin-bottom:.6rem}.chart-note{font-size:.68rem;color:var(--muted)}.chart-legend{display:flex;gap:.55rem;flex-wrap:wrap}.legend-item{display:inline-flex;align-items:center;gap:.35rem;font-size:.67rem;color:var(--muted);border:1px solid var(--line);background:rgba(255,255,255,.82);border-radius:999px;padding:.22rem .48rem}.legend-swatch{width:10px;height:10px;border-radius:999px;display:inline-block}.legend-swatch.ok{background:linear-gradient(180deg,#219050,#127a80)}.legend-swatch.bad{background:linear-gradient(180deg,#ce6045,#a84334)}.chart-wrap{height:320px;position:relative}canvas{width:100%!important;height:100%!important;display:block}#toasts{position:fixed;right:1rem;bottom:1rem;display:flex;flex-direction:column;gap:.5rem;align-items:flex-end;z-index:50}.toast{border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.94);color:var(--ink);padding:.55rem .72rem;font-size:.76rem;box-shadow:0 9px 24px rgba(0,0,0,.11)}.toast.ok{border-left:3px solid var(--ok)}.toast.info{border-left:3px solid var(--brand2)}
 @media(max-width:1020px){.hero{grid-template-columns:1fr}.hero-metrics{justify-content:flex-start}.row{grid-template-columns:1fr}}
 @media(max-width:760px){.page{width:96vw;margin:.65rem auto 1rem}.topbar{padding:.8rem}.title{font-size:.93rem}.chip{font-size:.64rem}.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi-value{font-size:1.4rem}.commit{grid-template-columns:58px 1fr}.cdate{grid-column:2}.chart-meta{flex-direction:column}.chart-wrap{height:240px}}
+.video-panel{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-bottom:.85rem}.video-ph{border-bottom:1px solid var(--line);padding:.78rem .95rem;display:flex;justify-content:space-between;align-items:center;gap:.6rem}.video-ph-left{display:flex;align-items:center;gap:.65rem}.video-icon{width:34px;height:34px;border-radius:10px;background:linear-gradient(150deg,var(--brand),var(--brand2));display:grid;place-items:center;color:#fff;font-size:1rem;flex-shrink:0}.video-ph-text .ph-title{font-size:.79rem;font-weight:700;letter-spacing:.02em}.video-ph-text .ph-sub{font-size:.64rem;color:var(--muted);margin-top:2px}.video-body{padding:1rem 1.1rem}.video-player-wrap{border-radius:12px;overflow:hidden;background:#0d0d0d;border:1px solid rgba(0,0,0,.22);position:relative}.video-player-wrap video{width:100%;display:block;max-height:540px;object-fit:contain}.video-info-row{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap;margin-top:.85rem}.video-chip{border:1px solid var(--line);border-radius:999px;padding:.3rem .68rem;font-size:.67rem;font-family:var(--mono);background:rgba(255,255,255,.88);color:var(--brand2)}.video-chip.heal{color:var(--ok);border-color:rgba(31,138,77,.35);background:rgba(31,138,77,.08)}.video-empty{text-align:center;padding:2.8rem 1rem;color:var(--muted);font-size:.8rem}.video-empty-icon{font-size:2.2rem;margin-bottom:.6rem;opacity:.55}
 </style>
 </head>
 <body>
@@ -86,6 +87,27 @@ body{font-family:'Sora',sans-serif;color:var(--ink);background:radial-gradient(1
       <div class="row">
         <div class="panel"><div class="ph"><span class="ph-title">Live Event Stream</span></div><div class="pb" style="max-height:320px;overflow-y:auto" id="o-stream"><div class="empty">Waiting for test activity...</div></div></div>
         <div class="panel"><div class="ph"><span class="ph-title">Latest Commits</span><span class="badge" id="o-commit-count">0</span></div><div class="pb" id="o-commits"><div class="sk"></div><div class="sk" style="width:72%;margin-top:8px"></div></div></div>
+      </div>
+
+      <div id="video-section-row" style="display:none">
+        <div class="video-panel">
+          <div class="video-ph">
+            <div class="video-ph-left">
+              <div class="video-icon">&#9654;</div>
+              <div class="video-ph-text">
+                <div class="ph-title">Latest Run Recording</div>
+                <div class="ph-sub">Merged Playwright suite video from the most recent CI run</div>
+              </div>
+            </div>
+            <span class="badge" id="video-run-badge">run &#8212;</span>
+          </div>
+          <div class="video-body">
+            <div class="video-player-wrap">
+              <video id="run-video" controls preload="metadata" playsinline></video>
+            </div>
+            <div class="video-info-row" id="video-info-row"></div>
+          </div>
+        </div>
       </div>
     </section>
     <section class="tab-panel" id="panel-git">
@@ -158,7 +180,39 @@ function hydrateFromStaticData(data){
   renderHealing();
   renderBarChart();
   renderMemory();
+  initRunVideo(data);
   if(S.selectedRun===null&&S.runs.length)selectRun(0);
+}
+
+function initRunVideo(data){
+  const section=document.getElementById('video-section-row');
+  if(!section)return;
+  const videoPath=data?.latestRunVideo||'videos/latest-run.webm';
+  const video=document.getElementById('run-video');
+  if(!video)return;
+  const badge=document.getElementById('video-run-badge');
+  const infoRow=document.getElementById('video-info-row');
+  const runNum=data?.workflow?.runNumber;
+  const generatedAt=data?.generatedAt;
+  const healRate=data?.stats?.healSuccessRate;
+  const totalHeals=(data?.stats?.totalSelectorHeals||0)+(data?.stats?.totalFlowHeals||0);
+  // Probe first so we only show the section when the file actually exists
+  fetch(videoPath,{method:'HEAD',cache:'no-store'})
+    .then(res=>{
+      if(!res.ok)return;
+      video.src=videoPath;
+      section.style.display='';
+      if(badge&&runNum)badge.textContent=`run #${runNum}`;
+      if(infoRow){
+        const chips=[];
+        if(runNum)chips.push(`<span class="video-chip">Run&nbsp;#${esc(runNum)}</span>`);
+        if(generatedAt)chips.push(`<span class="video-chip">${new Date(generatedAt).toLocaleString()}</span>`);
+        if(totalHeals)chips.push(`<span class="video-chip heal">${totalHeals} heals applied</span>`);
+        if(healRate)chips.push(`<span class="video-chip heal">${esc(healRate)}% heal rate</span>`);
+        infoRow.innerHTML=chips.join('');
+      }
+    })
+    .catch(()=>{});
 }
 
 function connectSSE(){

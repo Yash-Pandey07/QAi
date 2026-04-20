@@ -143,6 +143,14 @@ jobs:
             test-results/
           retention-days: 14
           if-no-files-found: warn
+      - name: Upload suite video
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: run-video-${{ github.run_number }}
+          path: test-results/run-videos/retail-showcase-suite-ci.webm
+          retention-days: 14
+          if-no-files-found: warn
 
   report:
     name: Healing Report Summary
@@ -158,6 +166,21 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: all-healing-artifacts/
+      - name: Download run video
+        uses: actions/download-artifact@v4
+        with:
+          name: run-video-${{ github.run_number }}
+          path: run-video/
+        continue-on-error: true
+      - name: Copy video into dashboard public bundle
+        run: |
+          mkdir -p dashboard/public/videos
+          if [ -f run-video/retail-showcase-suite-ci.webm ]; then
+            cp run-video/retail-showcase-suite-ci.webm dashboard/public/videos/latest-run.webm
+            echo "Suite video copied to dashboard/public/videos/latest-run.webm"
+          else
+            echo "No suite video found – skipping dashboard copy"
+          fi
       - name: Generate aggregate JSON summary
         run: |
           node -e "
@@ -229,6 +252,16 @@ jobs:
             git push origin dashboard-data
             cd ..
           fi
+      - name: Copy video to dashboard history branch
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          mkdir -p dashboard-history/videos
+          if [ -f run-video/retail-showcase-suite-ci.webm ]; then
+            cp run-video/retail-showcase-suite-ci.webm dashboard-history/videos/run-${{ github.run_id }}.webm
+            echo "Video archived to dashboard-history/videos/run-${{ github.run_id }}.webm"
+          else
+            echo "No suite video to archive"
+          fi
       - name: Persist run data to dashboard history branch
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: node src/tools/persist-dashboard-history.js --source dashboard/public/data/dashboard-data.json --history-dir dashboard-history
@@ -238,12 +271,12 @@ jobs:
           cd dashboard-history
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add history.json latest.json runs
+          git add history.json latest.json runs videos
           if git diff --cached --quiet; then
             echo "No dashboard history changes to commit"
             exit 0
           fi
-          git commit -m "Store dashboard data for run ${{ github.run_id }}"
+          git commit -m "Store dashboard data + video for run ${{ github.run_id }}"
           git push origin dashboard-data
       - name: Post summary to job
         run: |

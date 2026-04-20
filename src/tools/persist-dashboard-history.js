@@ -38,6 +38,13 @@ function buildHistoryEntry(runPayload, runFile) {
   const workflow = runPayload.workflow || {};
   const stats = runPayload.stats || {};
 
+  // Construct a direct raw.githubusercontent.com URL for the archived video
+  // so it can be embedded by any consumer without going through GitHub Pages.
+  const videoUrl =
+    workflow.repository && workflow.runId
+      ? `https://raw.githubusercontent.com/${workflow.repository}/dashboard-data/videos/run-${workflow.runId}.webm`
+      : null;
+
   return {
     runId: workflow.runId || null,
     runNumber: workflow.runNumber || null,
@@ -55,6 +62,7 @@ function buildHistoryEntry(runPayload, runFile) {
     estimatedTimeSaved: stats.estimatedTimeSaved || '0.0',
     healSuccessRate: stats.healSuccessRate || '0.0',
     file: runFile.replace(/\\/g, '/'),
+    videoUrl,
   };
 }
 
